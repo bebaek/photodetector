@@ -62,3 +62,11 @@ Run setup script to create the virtual environment and install photodetector
 package in the development mode:
 
     bash ci/setup-devenv.sh
+
+Run unit tests as needed at the root of the repo:
+
+    python -m unittest
+
+Conform to PEP8 and run linter:
+
+    flake8
