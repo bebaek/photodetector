@@ -9,6 +9,7 @@ setup(
     packages=find_packages(),
     package_data={
         '': ['data/*.jpg'],
+        '': ['data/*.png'],
     },
     install_requires=[
         'matplotlib',
