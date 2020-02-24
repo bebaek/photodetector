@@ -67,6 +67,6 @@ Run unit tests as needed at the root of the repo:
 
     python -m unittest
 
-Conform to PEP8 and run linter:
+Conform to PEP 8 and check the code style:
 
     flake8
