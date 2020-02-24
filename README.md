@@ -2,7 +2,7 @@
 
 Splits photographs in a scanned image. If you have a pile of photographs to
 scan and archive, scan multiple photographs together and use photodetector
-to automate image processing and file generation.
+to automatically generate separate photograph files.
 
 Based on Python, OpenCV for image segmentation, tilt correction, trim, and
 recursive path traversal.
