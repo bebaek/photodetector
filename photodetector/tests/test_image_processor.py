@@ -52,6 +52,8 @@ class TestImageProcess(unittest.TestCase):
         ip = ImageProcessor()
         ip.run(str(run_path))
 
-        # Recursion
+        # Check recursion
         sample_path = run_path / Path('nested/sample.jpg')
         mock_load.assert_called_once_with(sample_path)
+        mock_extract_photos.assert_called_once_with()
+        mock_save.assert_called_once_with()
