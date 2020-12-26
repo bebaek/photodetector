@@ -161,6 +161,8 @@ class ImageProcessor:
         if not isinstance(path, (list, tuple)):
             path = [path]
 
+        path = map(Path, path)
+
         for p in path:
             # Directory: recurse in
             if Path(p).is_dir():
