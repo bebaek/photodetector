@@ -9,7 +9,9 @@ logger = logging.getLogger(__name__)
 
 class ImageProcessor:
     """Processor of an image containing rectangular scanned photos."""
-    def __init__(self, diagnose=False, min_area=None, trim_left_edge=None):
+    def __init__(self, outdir='out', diagnose=False, min_area=None,
+                 trim_left_edge=None):
+        self.outdir = outdir
         self.diagnose = diagnose  # diagnose mode
         self.min_area = (
             min_area if min_area is not None and min_area > 0 else 10000)
@@ -121,7 +123,7 @@ class ImageProcessor:
         self.source = cv2.imread(str(file))
         logger.info(f'Loaded image from {self.source_path}.')
 
-    def save(self, outdir='out', prefix='', ext=None):
+    def save(self, prefix='', ext=None):
         if ext is None:
             ext = self.source_path.suffix
 
@@ -129,23 +131,23 @@ class ImageProcessor:
             prefix = self.source_path.stem
         prefix = str(prefix)
 
-        Path(outdir).mkdir(exist_ok=True)
+        Path(self.outdir).mkdir(parents=True, exist_ok=True)
 
         for i, img in enumerate(self.subimages):
-            fname = '{}/{}-{}{}'.format(outdir, prefix, i + 1, ext)
+            fname = '{}/{}-{}{}'.format(self.outdir, prefix, i + 1, ext)
             if Path(fname).exists():
                 logger.warning(f'File exists. Skipped saving to {fname}.')
             else:
                 cv2.imwrite(fname, img)
 
-        logger.info(f'Saved {len(self.subimages)} images in {outdir}.')
+        logger.info(f'Saved {len(self.subimages)} images in {self.outdir}.')
 
         if self.diagnose:
-            fname = '{}/{}-{}{}'.format(outdir, prefix, 'gray', ext)
+            fname = '{}/{}-{}{}'.format(self.outdir, prefix, 'gray', ext)
             cv2.imwrite(fname, self.imgray)
-            fname = '{}/{}-{}{}'.format(outdir, prefix, 'closing', ext)
+            fname = '{}/{}-{}{}'.format(self.outdir, prefix, 'closing', ext)
             cv2.imwrite(fname, self.closing)
-            fname = '{}/{}-{}{}'.format(outdir, prefix, 'boxes', ext)
+            fname = '{}/{}-{}{}'.format(self.outdir, prefix, 'boxes', ext)
             cv2.imwrite(fname, self.box_mask)
 
     def run(self, path):
@@ -162,12 +164,15 @@ class ImageProcessor:
         for p in path:
             # Directory: recurse in
             if Path(p).is_dir():
-                subpaths = Path(p).iterdir()
+                subpaths = sorted(list(Path(p).iterdir()))
                 for subp in subpaths:
                     self.run(subp)
 
             # File: process
             else:
+                if p.suffix.lower() not in [
+                        '.jpg', '.jpeg', '.webp', '.png', 'tif', 'tiff']:
+                    continue
                 self.load(p)
                 self.extract_photos()
                 self.save()
