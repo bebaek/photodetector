@@ -9,6 +9,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('path', help='file or directory', nargs='+')
     parser.add_argument('--outdir', help='output directory')
+    parser.add_argument('--threshold', type=int, help='threshold in grayscale')
     parser.add_argument('--min-area', type=int, help='min area')
     parser.add_argument('--trim-left-edge', type=int, help='trim left edge')
     parser.add_argument('--diagnose', help='diagnose mode',
