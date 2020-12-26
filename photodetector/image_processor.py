@@ -10,13 +10,14 @@ logger = logging.getLogger(__name__)
 class ImageProcessor:
     """Processor of an image containing rectangular scanned photos."""
     def __init__(self, outdir='out', thresh=220, min_area=None,
-                 trim_left_edge=None, diagnose=False):
+                 trim_left_edge=None, close=True, diagnose=False):
         self.outdir = outdir
         self.thresh = thresh
         self.min_area = (
             min_area if min_area is not None and min_area > 0 else 10000)
         self.max_aspect = 4
         self.trim_left_edge = trim_left_edge
+        self.close = close
         self.diagnose = diagnose  # diagnose mode
 
         # Abnormal images for users to check after
@@ -35,8 +36,10 @@ class ImageProcessor:
                                     cv2.THRESH_BINARY_INV)
 
         # Remove noise
-        kernel = np.ones((5, 5), np.uint8)
-        self.closing = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+        self.closing = thresh
+        if self.close:
+            kernel = np.ones((5, 5), np.uint8)
+            self.closing = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
 
         if self.diagnose:
             self.imgray = imgray

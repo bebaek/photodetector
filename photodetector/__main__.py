@@ -12,6 +12,8 @@ def main():
     parser.add_argument('--threshold', type=int, help='threshold in grayscale')
     parser.add_argument('--min-area', type=int, help='min area')
     parser.add_argument('--trim-left-edge', type=int, help='trim left edge')
+    parser.add_argument('--no-close', help='do not close speckles',
+                        action='store_true')
     parser.add_argument('--diagnose', help='diagnose mode',
                         action='store_true')
     args = parser.parse_args()
@@ -24,6 +26,7 @@ def main():
         thresh=args.threshold,
         min_area=args.min_area,
         trim_left_edge=args.trim_left_edge,
+        close=not args.no_close,
         diagnose=args.diagnose,
     )
     processor.run(args.path)
