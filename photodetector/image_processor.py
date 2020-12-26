@@ -40,8 +40,10 @@ class ImageProcessor:
 
         # Filter contours by size etc
         contours = []
+        extracted_area = 0
         for cnt in all_contours:
             area = cv2.contourArea(cnt)
+            extracted_area += area
             _, _, w, h = cv2.boundingRect(cnt)
             aspect = max(w / h, h / w)
             if area > self.min_area and aspect < self.max_aspect:
@@ -52,6 +54,10 @@ class ImageProcessor:
             raise RuntimeError(f'Too many contours found: {len(contours)}.')
 
         logger.debug(f'{len(contours)} contours found.')
+
+        h, w = self.source.shape[:2]
+        extraction_pct = extracted_area / (h * w)
+        logger.info(f'Extracted area: {extraction_pct:.0%}')
 
     def draw_contours(self):
         self.rects = []
@@ -108,8 +114,12 @@ class ImageProcessor:
     def load(self, file):
         self.source_path = Path(file)
         self.source = cv2.imread(str(file))
+        logger.info(f'Loaded image from {self.source_path}.')
 
-    def save(self, outdir='out', prefix='', ext='jpg'):
+    def save(self, outdir='out', prefix='', ext=None):
+        if ext is None:
+            ext = self.source_path.suffix
+
         if prefix.strip() == '':
             prefix = self.source_path.stem
         prefix = str(prefix)
@@ -117,18 +127,20 @@ class ImageProcessor:
         Path(outdir).mkdir(exist_ok=True)
 
         for i, img in enumerate(self.subimages):
-            fname = '{}/{}-{}.{}'.format(outdir, prefix, i + 1, ext)
+            fname = '{}/{}-{}{}'.format(outdir, prefix, i + 1, ext)
             if Path(fname).exists():
                 logger.warning(f'File exists. Skipped saving to {fname}.')
             else:
                 cv2.imwrite(fname, img)
 
+        logger.info(f'Saved {len(self.subimages)} images in {outdir}.')
+
         if self.diagnose:
-            fname = '{}/{}-{}.{}'.format(outdir, prefix, 'gray', ext)
+            fname = '{}/{}-{}{}'.format(outdir, prefix, 'gray', ext)
             cv2.imwrite(fname, self.imgray)
-            fname = '{}/{}-{}.{}'.format(outdir, prefix, 'closing', ext)
+            fname = '{}/{}-{}{}'.format(outdir, prefix, 'closing', ext)
             cv2.imwrite(fname, self.closing)
-            fname = '{}/{}-{}.{}'.format(outdir, prefix, 'boxes', ext)
+            fname = '{}/{}-{}{}'.format(outdir, prefix, 'boxes', ext)
             cv2.imwrite(fname, self.box_mask)
 
     def run(self, path):
