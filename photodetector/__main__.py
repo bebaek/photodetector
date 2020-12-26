@@ -21,6 +21,7 @@ def main():
 
     processor = ImageProcessor(
         outdir=args.outdir,
+        thresh=args.threshold,
         min_area=args.min_area,
         trim_left_edge=args.trim_left_edge,
         diagnose=args.diagnose,
