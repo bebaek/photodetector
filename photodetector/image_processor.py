@@ -16,6 +16,9 @@ class ImageProcessor:
         self.max_aspect = 4
         self.trim_left_edge = trim_left_edge
 
+        # Abnormal images for users to check after
+        self.abnormal = []
+
     def make_binary(self):
         im = self.source
         imgray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
@@ -56,8 +59,10 @@ class ImageProcessor:
         logger.debug(f'{len(contours)} contours found.')
 
         h, w = self.source.shape[:2]
-        extraction_pct = extracted_area / (h * w)
-        logger.info(f'Extracted area: {extraction_pct:.0%}')
+        extraction_frac = extracted_area / (h * w)
+        if extraction_frac < 0.5:
+            self.abnormal.append(self.source_path)
+        logger.info(f'Extracted area: {extraction_frac:.0%}')
 
     def draw_contours(self):
         self.rects = []
@@ -166,3 +171,11 @@ class ImageProcessor:
                 self.load(p)
                 self.extract_photos()
                 self.save()
+
+    def report(self):
+        if self.abnormal:
+            files = '\n'.join(map(str, self.abnormal))
+            logger.info(
+                f'These files have small extraction areas (< 50%):\n{files}')
+        else:
+            logger.info('All files have large extraction areas.')

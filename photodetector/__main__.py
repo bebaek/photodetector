@@ -17,8 +17,10 @@ def main():
     level = logging.DEBUG if args.diagnose else logging.INFO
     logging.basicConfig(level=level)
 
-    ImageProcessor(
+    processor = ImageProcessor(
         diagnose=args.diagnose,
         min_area=args.min_area,
         trim_left_edge=args.trim_left_edge,
-    ).run(args.path)
+    )
+    processor.run(args.path)
+    processor.report()
