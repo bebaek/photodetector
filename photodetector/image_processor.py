@@ -14,7 +14,7 @@ class ImageProcessor:
         self.outdir = outdir
         self.thresh = thresh
         self.min_area = (
-            min_area if min_area is not None and min_area > 0 else 10000)
+            min_area if min_area is not None and min_area > 0 else 50000)
         self.max_aspect = 4
         self.trim_left_edge = trim_left_edge
         self.close = close
