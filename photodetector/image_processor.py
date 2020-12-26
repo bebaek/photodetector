@@ -3,44 +3,67 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from numpy.linalg import norm
 
 logger = logging.getLogger(__name__)
 
 
 class ImageProcessor:
     """Processor of an image containing rectangular scanned photos."""
+    def __init__(self, diagnose=False, min_area=None, trim_left_edge=None):
+        self.diagnose = diagnose  # diagnose mode
+        self.min_area = (
+            min_area if min_area is not None and min_area > 0 else 10000)
+        self.max_aspect = 4
+        self.trim_left_edge = trim_left_edge
 
     def make_binary(self):
         im = self.source
         imgray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
 
-        # Make a binary image
-        ret, thresh = cv2.threshold(imgray, 240, 255, cv2.THRESH_BINARY_INV)
+        # Trim edge if this is a trouble
+        if self.trim_left_edge is not None:
+            imgray[:, :self.trim_left_edge] = 255
+
+        # Make a binary image to exclude white or black background
+        ret, thresh = cv2.threshold(imgray, 220, 255, cv2.THRESH_BINARY_INV)
 
         # Remove noise
         kernel = np.ones((5, 5), np.uint8)
         self.closing = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
 
+        if self.diagnose:
+            self.imgray = imgray
+
     def find_contours(self):
         all_contours, hierarchy = cv2.findContours(
-            self.closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            self.closing, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Filter contours by size etc
         contours = []
         for cnt in all_contours:
-            if cv2.contourArea(cnt) > 400:
+            area = cv2.contourArea(cnt)
+            _, _, w, h = cv2.boundingRect(cnt)
+            aspect = max(w / h, h / w)
+            if area > self.min_area and aspect < self.max_aspect:
                 contours.append(cnt)
         self.contours = contours
 
+        if len(contours) > 20:
+            raise RuntimeError(f'Too many contours found: {len(contours)}.')
+
+        logger.debug(f'{len(contours)} contours found.')
+
     def draw_contours(self):
-        boxes = []
+        self.rects = []
+        self.boxes = []
         for cnt in self.contours:
             rect = cv2.minAreaRect(cnt)
             box = cv2.boxPoints(rect)
-            boxes.append(np.int0(box))
+            self.rects.append(rect)
+            self.boxes.append(np.int0(box))
         im_cnt = np.copy(self.source)
-        cv2.drawContours(im_cnt, boxes, -1, (0, 255, 0), 2)
+        cv2.drawContours(im_cnt, self.boxes, -1, (0, 255, 0), 2)
 
-        self.boxes = boxes
         self.im_cnt = cv2.cvtColor(im_cnt, cv2.COLOR_BGR2RGB)
 
     def crop(self):
@@ -48,42 +71,32 @@ class ImageProcessor:
 
         # Crop inside contours
         self.subimages = []
-        for box in self.boxes:
+        if self.diagnose:
+            self.box_mask = np.zeros(im.shape, np.uint8)
+            self.im_masked = np.zeros(im.shape, np.uint8)
+        for rect, box in zip(self.rects, self.boxes):
             # Get all the points inside the box
             mask = np.zeros(im.shape, np.uint8)
             cv2.drawContours(mask, [box], 0, (255, 255, 255), -1)
+            if self.diagnose:
+                self.box_mask = np.bitwise_or(self.box_mask, mask)
+
             masked = np.bitwise_and(mask, im)
+            if self.diagnose:
+                self.im_masked = np.bitwise_or(self.im_masked, masked)
 
-            # Crop
-            xmin = np.amin(box[:, 0])
-            xmax = np.amax(box[:, 0])
-            ymin = np.amin(box[:, 1])
-            ymax = np.amax(box[:, 1])
-            cropped = masked[ymin:ymax + 1, xmin:xmax + 1]
+            # Fix orientation to right angle
+            width = int(rect[1][0])
+            height = int(rect[1][1])
+            src_pts = box.astype("float32")
+            dst_pts = np.array([[0, height - 1],
+                                [0, 0],
+                                [width - 1, 0],
+                                [width - 1, height - 1]], dtype="float32")
+            M = cv2.getPerspectiveTransform(src_pts, dst_pts)
+            warped = cv2.warpPerspective(masked, M, (width, height))
 
-            # Untilt
-            vtop = box[np.argmin(box[:, 1])]
-            vleft = box[np.argmin(box[:, 0])]
-            vright = box[np.argmax(box[:, 0])]
-            angle = np.arctan((vright[1] - vtop[1]) / (vright[0] - vtop[0])) \
-                * 180 / np.pi
-            if angle > 45:
-                angle = -(90 - angle)
-            center = ((xmax - xmin)/2, (ymax - ymin)/2)
-            mat = cv2.getRotationMatrix2D(center, angle, 1)
-            cropped_size = cropped.shape[1::-1]
-            untilted = cv2.warpAffine(cropped, mat, cropped_size)
-
-            # Trim after untilt
-            size = (int(norm(vright - vtop)), int(norm(vleft - vtop)))
-            if angle < 0:
-                size = size[::-1]
-            xmin = int(cropped_size[0] / 2 - size[0] / 2) + 1  # 1 border px
-            xmax = int(cropped_size[0] / 2 + size[0] / 2) - 1
-            ymin = int(cropped_size[1] / 2 - size[1] / 2) + 1
-            ymax = int(cropped_size[1] / 2 + size[1] / 2) - 1
-            subim = untilted[ymin:ymax + 1, xmin:xmax + 1]
-            self.subimages.append(subim)
+            self.subimages.append(warped)
 
     def extract_photos(self):
         """Run all image processing methods."""
@@ -109,6 +122,14 @@ class ImageProcessor:
                 logger.warning(f'File exists. Skipped saving to {fname}.')
             else:
                 cv2.imwrite(fname, img)
+
+        if self.diagnose:
+            fname = '{}/{}-{}.{}'.format(outdir, prefix, 'gray', ext)
+            cv2.imwrite(fname, self.imgray)
+            fname = '{}/{}-{}.{}'.format(outdir, prefix, 'closing', ext)
+            cv2.imwrite(fname, self.closing)
+            fname = '{}/{}-{}.{}'.format(outdir, prefix, 'boxes', ext)
+            cv2.imwrite(fname, self.box_mask)
 
     def run(self, path):
         """Run all image processes and file handling.
