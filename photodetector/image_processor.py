@@ -43,9 +43,9 @@ class ImageProcessor:
         if self.diagnose:
             self.imgray = imgray
 
-    def find_contours(self):
+    def find_contours(self, image, verbose=False):
         all_contours, hierarchy = cv2.findContours(
-            self.closing, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # Filter contours by size etc
         contours = []
@@ -58,18 +58,40 @@ class ImageProcessor:
             aspect = max(w / h, h / w)
             if area > self.min_area and aspect < self.max_aspect:
                 contours.append(cnt)
-        self.contours = contours
 
         if len(contours) > 20:
             raise RuntimeError(f'Too many contours found: {len(contours)}.')
-
-        logger.debug(f'{len(contours)} contours found.')
 
         h, w = self.source.shape[:2]
         extraction_frac = extracted_area / (h * w)
         if extraction_frac < 0.5:
             self.abnormal.append(self.source_path)
-        logger.info(f'Extracted area: {extraction_frac:.0%}')
+        if verbose:
+            logger.info(
+                'Found {} contours with {:.0%} area'.format(
+                    len(contours), extraction_frac,
+                )
+            )
+
+        return contours
+
+    def fill_contours(self, contours):
+        """Return binary image with filled contours for non-overlapping contour
+        search.
+        """
+        rects = []
+        boxes = []
+        for cnt in contours:
+            rect = cv2.minAreaRect(cnt)
+            box = cv2.boxPoints(rect)
+            rects.append(rect)
+            boxes.append(np.int0(box))
+
+        im_cnt = np.zeros_like(self.closing)
+        cv2.drawContours(im_cnt, boxes, -1, 255, -1)
+        if self.diagnose:
+            self.filled = im_cnt
+        return im_cnt
 
     def draw_contours(self):
         self.rects = []
@@ -79,10 +101,11 @@ class ImageProcessor:
             box = cv2.boxPoints(rect)
             self.rects.append(rect)
             self.boxes.append(np.int0(box))
-        im_cnt = np.copy(self.source)
-        cv2.drawContours(im_cnt, self.boxes, -1, (0, 255, 0), 2)
 
-        self.im_cnt = cv2.cvtColor(im_cnt, cv2.COLOR_BGR2RGB)
+        if self.diagnose:
+            im_cnt = np.copy(self.source)
+            cv2.drawContours(im_cnt, self.boxes, -1, (0, 255, 0), 2)
+            self.im_cnt = cv2.cvtColor(im_cnt, cv2.COLOR_BGR2RGB)
 
     def crop(self):
         im = self.source
@@ -119,7 +142,14 @@ class ImageProcessor:
     def extract_photos(self):
         """Run all image processing methods."""
         self.make_binary()
-        self.find_contours()
+
+        # Initial contours. A box may contain another
+        self.contours = self.find_contours(self.closing)
+
+        # Get nonoverlapping contours from initial contours
+        im_cnt = self.fill_contours(self.contours)
+        self.contours = self.find_contours(im_cnt, verbose=True)
+
         self.draw_contours()
         self.crop()
 
@@ -152,6 +182,8 @@ class ImageProcessor:
             cv2.imwrite(fname, self.imgray)
             fname = '{}/{}-{}{}'.format(self.outdir, prefix, 'closing', ext)
             cv2.imwrite(fname, self.closing)
+            fname = '{}/{}-{}{}'.format(self.outdir, prefix, 'filled', ext)
+            cv2.imwrite(fname, self.filled)
             fname = '{}/{}-{}{}'.format(self.outdir, prefix, 'boxes', ext)
             cv2.imwrite(fname, self.box_mask)
 
