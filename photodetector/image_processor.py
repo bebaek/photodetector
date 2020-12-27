@@ -10,13 +10,15 @@ logger = logging.getLogger(__name__)
 class ImageProcessor:
     """Processor of an image containing rectangular scanned photos."""
     def __init__(self, outdir='out', thresh=200, min_area=50000,
-                 left_trim=0, close=True, diagnose=False):
+                 left_trim=0, close=True, no_suppress_overlap=True,
+                 diagnose=False):
         self.outdir = outdir
         self.thresh = thresh
         self.min_area = min_area
         self.max_aspect = 4
         self.left_trim = left_trim
         self.close = close
+        self.no_suppress_overlap = no_suppress_overlap
         self.diagnose = diagnose  # diagnose mode
 
         # Abnormal images for users to check after
@@ -144,11 +146,13 @@ class ImageProcessor:
         self.make_binary()
 
         # Initial contours. A box may contain another
-        self.contours = self.find_contours(self.closing)
+        self.contours = self.find_contours(self.closing,
+                                           final=self.no_suppress_overlap)
 
         # Get nonoverlapping contours from initial contours
-        im_cnt = self.fill_contours(self.contours)
-        self.contours = self.find_contours(im_cnt, final=True)
+        if not self.no_suppress_overlap:
+            im_cnt = self.fill_contours(self.contours)
+            self.contours = self.find_contours(im_cnt, final=True)
 
         self.draw_contours()
         self.crop()
@@ -182,8 +186,9 @@ class ImageProcessor:
             cv2.imwrite(fname, self.imgray)
             fname = '{}/{}-{}{}'.format(self.outdir, prefix, 'closing', ext)
             cv2.imwrite(fname, self.closing)
-            fname = '{}/{}-{}{}'.format(self.outdir, prefix, 'filled', ext)
-            cv2.imwrite(fname, self.filled)
+            if not self.no_suppress_overlap:
+                fname = '{}/{}-{}{}'.format(self.outdir, prefix, 'filled', ext)
+                cv2.imwrite(fname, self.filled)
             fname = '{}/{}-{}{}'.format(self.outdir, prefix, 'boxes', ext)
             cv2.imwrite(fname, self.box_mask)
 

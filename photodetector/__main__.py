@@ -16,6 +16,9 @@ def main():
                         help='left edge thickness to trim')
     parser.add_argument('--no-close', help='do not close speckles',
                         action='store_true')
+    parser.add_argument('--no-suppress-overlap',
+                        help='do not suppress overlapping contours',
+                        action='store_true')
     parser.add_argument('--diagnose', help='diagnose mode',
                         action='store_true')
     args = parser.parse_args()
@@ -29,6 +32,7 @@ def main():
         min_area=args.min_area,
         left_trim=args.left_trim,
         close=not args.no_close,
+        no_suppress_overlap=args.no_suppress_overlap,
         diagnose=args.diagnose,
     )
     processor.run(args.path)
