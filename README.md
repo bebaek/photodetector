@@ -30,6 +30,12 @@ Run command line applicaton:
 `PATH` is either filename or directory name. Resulting files will be saved in
 `out` directory.
 
+Use optional parameters as needed, for example:
+
+    photodetector --left-trim 40 --thresh 200 --outdir outgoing/ incoming/
+
+Run `photodetector -h` to see the full list of options.
+
 In order to use in your Python script or application, import the package and
 use the main class `ImageProcessor`:
 
