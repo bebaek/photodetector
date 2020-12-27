@@ -48,6 +48,10 @@ use the main class `ImageProcessor`:
     ip.extract_photos()
     ip.save(outdir='foo-out')
 
+Output images may have wrong orientations. Use the accompanying command to
+interactively fix that:
+
+    photorot SOURCE-FOLDER TARGET-FOLDER
 
 ## Uninstalling
 
