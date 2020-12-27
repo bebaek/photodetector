@@ -9,9 +9,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('path', help='file or directory', nargs='+')
     parser.add_argument('--outdir', help='output directory')
-    parser.add_argument('--threshold', type=int, help='threshold in grayscale')
-    parser.add_argument('--min-area', type=int, help='min area')
-    parser.add_argument('--trim-left-edge', type=int, help='trim left edge')
+    parser.add_argument('--threshold', type=int, default=220,
+                        help='threshold in grayscale')
+    parser.add_argument('--min-area', type=int, default=50000, help='min area')
+    parser.add_argument('--left-trim', type=int, default=0,
+                        help='left edge thickness to trim')
     parser.add_argument('--no-close', help='do not close speckles',
                         action='store_true')
     parser.add_argument('--diagnose', help='diagnose mode',
@@ -25,7 +27,7 @@ def main():
         outdir=args.outdir,
         thresh=args.threshold,
         min_area=args.min_area,
-        trim_left_edge=args.trim_left_edge,
+        left_trim=args.left_trim,
         close=not args.no_close,
         diagnose=args.diagnose,
     )

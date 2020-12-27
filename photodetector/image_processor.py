@@ -9,14 +9,13 @@ logger = logging.getLogger(__name__)
 
 class ImageProcessor:
     """Processor of an image containing rectangular scanned photos."""
-    def __init__(self, outdir='out', thresh=220, min_area=None,
-                 trim_left_edge=None, close=True, diagnose=False):
+    def __init__(self, outdir='out', thresh=200, min_area=50000,
+                 left_trim=0, close=True, diagnose=False):
         self.outdir = outdir
         self.thresh = thresh
-        self.min_area = (
-            min_area if min_area is not None and min_area > 0 else 50000)
+        self.min_area = min_area
         self.max_aspect = 4
-        self.trim_left_edge = trim_left_edge
+        self.left_trim = left_trim
         self.close = close
         self.diagnose = diagnose  # diagnose mode
 
@@ -28,8 +27,8 @@ class ImageProcessor:
         imgray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
 
         # Trim edge if this is a trouble
-        if self.trim_left_edge is not None:
-            imgray[:, :self.trim_left_edge] = 255
+        if self.left_trim:
+            imgray[:, :self.left_trim] = 255
 
         # Make a binary image to exclude white or black background
         ret, thresh = cv2.threshold(imgray, self.thresh, 255,
@@ -53,6 +52,7 @@ class ImageProcessor:
         extracted_area = 0
         for cnt in all_contours:
             area = cv2.contourArea(cnt)
+            # FIXME: replace with final box areas
             extracted_area += area
             _, _, w, h = cv2.boundingRect(cnt)
             aspect = max(w / h, h / w)
