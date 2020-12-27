@@ -43,7 +43,7 @@ class ImageProcessor:
         if self.diagnose:
             self.imgray = imgray
 
-    def find_contours(self, image, verbose=False):
+    def find_contours(self, image, final=False):
         all_contours, hierarchy = cv2.findContours(
             image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -62,11 +62,11 @@ class ImageProcessor:
         if len(contours) > 20:
             raise RuntimeError(f'Too many contours found: {len(contours)}.')
 
-        h, w = self.source.shape[:2]
-        extraction_frac = extracted_area / (h * w)
-        if extraction_frac < 0.5:
-            self.abnormal.append(self.source_path)
-        if verbose:
+        if final:
+            h, w = self.source.shape[:2]
+            extraction_frac = extracted_area / (h * w)
+            if extraction_frac < 0.5:
+                self.abnormal.append(self.source_path)
             logger.info(
                 'Found {} contours with {:.0%} area'.format(
                     len(contours), extraction_frac,
@@ -148,7 +148,7 @@ class ImageProcessor:
 
         # Get nonoverlapping contours from initial contours
         im_cnt = self.fill_contours(self.contours)
-        self.contours = self.find_contours(im_cnt, verbose=True)
+        self.contours = self.find_contours(im_cnt, final=True)
 
         self.draw_contours()
         self.crop()
