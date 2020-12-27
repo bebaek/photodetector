@@ -17,6 +17,7 @@ setup(
     entry_points={
         'console_scripts': [
             'photodetector = photodetector.__main__:main',
+            'photorot = photodetector.photorot:main',
         ],
     },
 )
