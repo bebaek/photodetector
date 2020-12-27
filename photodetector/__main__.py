@@ -14,6 +14,10 @@ def main():
     parser.add_argument('--min-area', type=int, default=50000, help='min area')
     parser.add_argument('--left-trim', type=int, default=0,
                         help='left edge thickness to trim')
+    parser.add_argument('--right-trim', type=int, default=0,
+                        help='right edge thickness to trim')
+    parser.add_argument('--top-trim', type=int, default=0,
+                        help='top edge thickness to trim')
     parser.add_argument('--no-close', help='do not close speckles',
                         action='store_true')
     parser.add_argument('--no-suppress-overlap',
@@ -31,6 +35,8 @@ def main():
         thresh=args.threshold,
         min_area=args.min_area,
         left_trim=args.left_trim,
+        right_trim=args.right_trim,
+        top_trim=args.top_trim,
         close=not args.no_close,
         no_suppress_overlap=args.no_suppress_overlap,
         diagnose=args.diagnose,

@@ -10,13 +10,15 @@ logger = logging.getLogger(__name__)
 class ImageProcessor:
     """Processor of an image containing rectangular scanned photos."""
     def __init__(self, outdir='out', thresh=200, min_area=50000,
-                 left_trim=0, close=True, no_suppress_overlap=True,
-                 diagnose=False):
+                 left_trim=0, right_trim=0, top_trim=0, close=True,
+                 no_suppress_overlap=True, diagnose=False):
         self.outdir = outdir
         self.thresh = thresh
         self.min_area = min_area
         self.max_aspect = 4
         self.left_trim = left_trim
+        self.right_trim = right_trim
+        self.top_trim = top_trim
         self.close = close
         self.no_suppress_overlap = no_suppress_overlap
         self.diagnose = diagnose  # diagnose mode
@@ -28,9 +30,13 @@ class ImageProcessor:
         im = self.source
         imgray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
 
-        # Trim edge if this is a trouble
+        # Trim edge as needed
         if self.left_trim:
             imgray[:, :self.left_trim] = 255
+        if self.right_trim:
+            imgray[:, -self.right_trim:] = 255
+        if self.top_trim:
+            imgray[:self.top_trim, :] = 255
 
         # Make a binary image to exclude white or black background
         ret, thresh = cv2.threshold(imgray, self.thresh, 255,
