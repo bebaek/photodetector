@@ -51,7 +51,7 @@ use the main class `ImageProcessor`:
 Output images may have wrong orientations. Use the accompanying command to
 interactively fix that:
 
-    photorot SOURCE-FOLDER TARGET-FOLDER
+    photorot SOURCE_FOLDER TARGET_FOLDER
 
 ## Uninstalling
 
